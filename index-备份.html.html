@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>借条生成器（专业版）</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --card:#0f1b33cc;
+      --cardSolid:#0f1b33;
+      --text:#e8eefc;
+      --muted:#a9b7d0;
+      --line:#243556;
+      --brand:#6ea8fe;
+      --brand2:#7cf0c6;
+      --danger:#ff6b6b;
+      --shadow: 0 20px 60px rgba(0,0,0,.45);
+      --radius: 16px;
+      --radius2: 12px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color:var(--text);
+      background:
+        radial-gradient(1200px 600px at 20% 10%, rgba(110,168,254,.22), transparent 60%),
+        radial-gradient(900px 500px at 80% 20%, rgba(124,240,198,.16), transparent 60%),
+        radial-gradient(900px 600px at 40% 90%, rgba(255,107,107,.10), transparent 60%),
+        var(--bg);
+      min-height:100vh;
+    }
+    .container{
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 16px 46px;
+    }
+    .top{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom: 16px;
+    }
+    .brand{
+      display:flex;flex-direction:column;gap:6px
+    }
+    .brand h1{
+      margin:0;
+      font-size: 22px;
+      letter-spacing:.2px;
+    }
+    .brand p{
+      margin:0;
+      color:var(--muted);
+      font-size: 13px;
+      line-height:1.5;
+    }
+    .pill{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+    .pill span{
+      font-size:12px;
+      color:var(--muted);
+      border:1px solid var(--line);
+      background: rgba(15,27,51,.55);
+      padding:6px 10px;
+      border-radius:999px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      align-items:start;
+    }
+    @media (max-width: 980px){
+      .grid{grid-template-columns: 1fr}
+      .top{align-items:flex-start;flex-direction:column}
+      .pill{justify-content:flex-start}
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(15,27,51,.88), rgba(15,27,51,.55));
+      border: 1px solid rgba(36,53,86,.75);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .cardHeader{
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(36,53,86,.7);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      background: rgba(15,27,51,.65);
+    }
+    .cardHeader h2{
+      margin:0;
+      font-size: 14px;
+      letter-spacing:.2px;
+    }
+    .cardHeader .hint{
+      margin:0;
+      font-size:12px;
+      color: var(--muted);
+    }
+    .cardBody{padding: 16px}
+    .section{
+      border: 1px solid rgba(36,53,86,.7);
+      border-radius: var(--radius2);
+      padding: 12px;
+      background: rgba(8,14,28,.35);
+      margin-bottom: 12px;
+    }
+    .sectionTitle{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin:0 0 10px;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .row{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    @media (max-width: 520px){
+      .row{grid-template-columns: 1fr}
+    }
+    label{
+      display:block;
+      font-size:12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    input, select, textarea{
+      width:100%;
+      padding: 10px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(36,53,86,.9);
+      background: rgba(15,27,51,.65);
+      color: var(--text);
+      outline:none;
+    }
+    input::placeholder, textarea::placeholder{color: rgba(169,183,208,.6)}
+    textarea{
+      resize: vertical;
+      min-height: 320px;
+      font-family: var(--mono);
+      line-height:1.55;
+      font-size: 12.5px;
+      background: rgba(6,11,22,.55);
+    }
+    .actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top: 10px;
+    }
+    button{
+      border: 1px solid rgba(36,53,86,.9);
+      background: rgba(15,27,51,.75);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor:pointer;
+      transition: transform .05s ease, background .2s ease, border-color .2s ease;
+      font-size: 13px;
+    }
+    button.primary{
+      border-color: rgba(110,168,254,.9);
+      background: linear-gradient(180deg, rgba(110,168,254,.35), rgba(110,168,254,.18));
+    }
+    button:hover{border-color: rgba(110,168,254,.9)}
+    button:active{transform: translateY(1px)}
+    .dangerText{color: var(--danger)}
+    .muted{color: var(--muted)}
+    .tiny{font-size:12px}
+    .hidden{display:none !important}
+    .twoCol{
+      display:grid; grid-template-columns: 1fr 1fr; gap:10px;
+    }
+    .help{
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .kbd{
+      font-family: var(--mono);
+      font-size: 11px;
+      border: 1px solid rgba(36,53,86,.8);
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: rgba(15,27,51,.65);
+      color: var(--text);
+      display:inline-block;
+      margin: 0 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top">
+      <div class="brand">
+        <h1>借条生成器（专业版）</h1>
+        <p>输入要素 → 自动生成可复制的借条文本。你可以选择一次性还款或分期还款，并自动带入利息、逾期利息、维权费用条款。</p>
+      </div>
+      <div class="pill">
+        <span>本工具仅为模板生成</span>
+        <span>建议生成后核对条款</span>
+        <span class="dangerText">大额/复杂情形建议咨询专业人士</span>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- 左侧：表单 -->
+      <div class="card">
+        <div class="cardHeader">
+          <h2>填写信息</h2>
+          <p class="hint">带 * 为必填</p>
+        </div>
+
+        <div class="cardBody">
+          <div class="section">
+            <div class="sectionTitle">当事人信息</div>
+            <div class="row">
+              <div>
+                <label>出借人（甲方）姓名 *</label>
+                <input id="lenderName" type="text" placeholder="例如：李四" />
+              </div>
+              <div>
+                <label>借款人（乙方）姓名 *</label>
+                <input id="borrowerName" type="text" placeholder="例如：张三" />
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label>出借人身份证号（可选）</label>
+                <input id="lenderId" type="text" placeholder="可不填" />
+              </div>
+              <div>
+                <label>借款人身份证号（可选）</label>
+                <input id="borrowerId" type="text" placeholder="可不填" />
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="sectionTitle">借款基本信息</div>
+            <div class="row">
+              <div>
+                <label>借款金额（元） *</label>
+                <input id="amount" type="number" min="0" step="0.01" placeholder="例如：5000" />
+              </div>
+              <div>
+                <label>借款发放日期 *</label>
+                <input id="loanDate" type="date" />
+              </div>
+            </div>
+
+            <div class="row">
+              <div>
+                <label>还款日期（到期日） *</label>
+                <input id="dueDate" type="date" />
+              </div>
+              <div>
+                <label>币种</label>
+                <select id="currency">
+                  <option value="人民币">人民币</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row">
+              <div>
+                <label>借款期间利息（%/年） *</label>
+                <input id="interestAnnual" type="number" min="0" step="0.01" placeholder="例如：12 表示年化12%" />
+              </div>
+              <div>
+                <label>逾期利息（%/年） *</label>
+                <input id="overdueAnnual" type="number" min="0" step="0.01" placeholder="例如：18 表示年化18%" />
+              </div>
+            </div>
+
+            <div class="row">
+              <div>
+                <label>利息计算方式</label>
+                <select id="interestMethod">
+                  <option value="按年化利率按日折算（年化/365）">按年化利率按日折算（年化/365）</option>
+                  <option value="按年化利率按月折算（年化/12）">按年化利率按月折算（年化/12）</option>
+                </select>
+              </div>
+              <div>
+                <label>还款方式 *</label>
+                <select id="repaymentType">
+                  <option value="lump">一次性还款（到期一次还本付息）</option>
+                  <option value="installment">分期还款</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="lumpBox" class="section">
+            <div class="sectionTitle">一次性还款设置</div>
+            <div class="row">
+              <div>
+                <label>到期结清说明</label>
+                <input id="lumpNote" type="text" placeholder="例如：到期一次性归还本金并支付利息" />
+              </div>
+              <div>
+                <label>还款账户/方式（可选）</label>
+                <input id="payChannel" type="text" placeholder="例如：转账至甲方指定账户/微信/现金等" />
+              </div>
+            </div>
+          </div>
+
+          <div id="installmentBox" class="section hidden">
+            <div class="sectionTitle">分期还款设置</div>
+            <div class="row">
+              <div>
+                <label>分期期数 *</label>
+                <input id="installmentCount" type="number" min="1" step="1" placeholder="例如：6" />
+              </div>
+              <div>
+                <label>每期还款日（每月几号） *</label>
+                <input id="installmentDay" type="number" min="1" max="28" step="1" placeholder="建议 1-28，例如：15" />
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label>分期方式说明</label>
+                <select id="installmentRule">
+                  <option value="每期等额本金，利息按剩余本金计算">每期等额本金，利息按剩余本金计算</option>
+                  <option value="每期等额本息（由双方另行确认具体金额）">每期等额本息（由双方另行确认具体金额）</option>
+                  <option value="每期固定金额（由双方约定并填写明细）">每期固定金额（由双方约定并填写明细）</option>
+                </select>
+              </div>
+              <div>
+                <label>分期明细（可选）</label>
+                <input id="installmentDetail" type="text" placeholder="例如：第1-6期每期1000元（含利息），或另附表" />
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="sectionTitle">违约与费用条款</div>
+            <div class="row">
+              <div>
+                <label>维权费用条款（自动写入）</label>
+                <input value="违约方应承担守约方为实现债权/主张权利产生的合理费用" disabled />
+              </div>
+              <div>
+                <label>费用示例（自动写入）</label>
+                <input value="诉讼费、差旅费、食宿费、保函费、保全费、律师费等（含但不限于）" disabled />
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label>争议解决方式</label>
+                <select id="dispute">
+                  <option value="向出借人所在地人民法院起诉">向出借人所在地人民法院起诉</option>
+                  <option value="向借款人所在地人民法院起诉">向借款人所在地人民法院起诉</option>
+                  <option value="由双方另行约定">由双方另行约定</option>
+                </select>
+              </div>
+              <div>
+                <label>备注（可选）</label>
+                <input id="remark" type="text" placeholder="例如：资金用途、收款账号、担保人等" />
+              </div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="primary" id="generateBtn">生成借条</button>
+            <button id="copyBtn">复制内容</button>
+            <button id="clearBtn">清空输入</button>
+          </div>
+
+          <div class="help">
+            小技巧：生成后可直接复制；也可以在右侧文本框按 <span class="kbd">Ctrl</span>+<span class="kbd">A</span> 全选，<span class="kbd">Ctrl</span>+<span class="kbd">C</span> 复制。
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧：结果 -->
+      <div class="card">
+        <div class="cardHeader">
+          <h2>借条文本（可复制）</h2>
+          <p class="hint">生成后请核对当事人信息与日期</p>
+        </div>
+        <div class="cardBody">
+          <textarea id="result" placeholder="点击左侧“生成借条”后，这里会出现完整借条内容…"></textarea>
+          <div class="help tiny muted">
+            提示：本模板会写入“借款期间利息”“逾期利息”“维权费用（含但不限于诉讼费、差旅费、食宿费、保函费、保全费、律师费等）”条款。你可根据实际情况增删。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function fmtDateCN(dateStr){
+      if(!dateStr) return "";
+      var p = dateStr.split("-");
+      return p[0] + "年" + p[1] + "月" + p[2] + "日";
+    }
+    function getVal(id){
+      return document.getElementById(id).value.trim();
+    }
+    function setVal(id, v){
+      document.getElementById(id).value = v;
+    }
+
+    function toggleRepayment(){
+      var type = document.getElementById("repaymentType").value;
+      var lumpBox = document.getElementById("lumpBox");
+      var insBox = document.getElementById("installmentBox");
+      if(type === "installment"){
+        lumpBox.classList.add("hidden");
+        insBox.classList.remove("hidden");
+      }else{
+        insBox.classList.add("hidden");
+        lumpBox.classList.remove("hidden");
+      }
+    }
+    document.getElementById("repaymentType").addEventListener("change", toggleRepayment);
+    toggleRepayment();
+
+    document.getElementById("generateBtn").addEventListener("click", function(){
+      var lenderName = getVal("lenderName");
+      var borrowerName = getVal("borrowerName");
+      var lenderId = getVal("lenderId");
+      var borrowerId = getVal("borrowerId");
+
+      var amount = getVal("amount");
+      var currency = document.getElementById("currency").value;
+
+      var loanDateRaw = document.getElementById("loanDate").value;
+      var dueDateRaw = document.getElementById("dueDate").value;
+
+      var interestAnnual = getVal("interestAnnual");
+      var overdueAnnual = getVal("overdueAnnual");
+      var interestMethod = document.getElementById("interestMethod").value;
+
+      var repaymentType = document.getElementById("repaymentType").value;
+
+      var dispute = document.getElementById("dispute").value;
+      var remark = getVal("remark");
+
+      if(!lenderName || !borrowerName || !amount || !loanDateRaw || !dueDateRaw || !interestAnnual || !overdueAnnual){
+        alert("请先填写必填项（带 * 的项）。");
+        return;
+      }
+
+      if(Number(amount) <= 0){
+        alert("借款金额必须大于 0。");
+        return;
+      }
+
+      var loanDate = fmtDateCN(loanDateRaw);
+      var dueDate = fmtDateCN(dueDateRaw);
+
+      var partyLineA = "甲方（出借人）：" + lenderName + (lenderId ? "，身份证号：" + lenderId : "");
+      var partyLineB = "乙方（借款人）：" + borrowerName + (borrowerId ? "，身份证号：" + borrowerId : "");
+
+      var base =
+        "借条\n\n" +
+        partyLineA + "\n" +
+        partyLineB + "\n\n" +
+        "一、借款事实\n" +
+        "乙方确认于" + loanDate + "向甲方借款" + currency + amount + "元（小写：" + amount + "元）。乙方承诺上述借款真实、合法、有效。\n\n" +
+        "二、借款期限与还款日期\n" +
+        "借款期限自" + loanDate + "起至" + dueDate + "止。乙方应于到期日（" + dueDate + "）前清偿本息（或按约定分期清偿）。\n\n" +
+        "三、借款期间利息\n" +
+        "借款期间利息按年化利率" + interestAnnual + "%计算，" + interestMethod + "；利息支付/结算方式按本借条约定的还款方式执行。\n\n" +
+        "四、逾期利息\n" +
+        "乙方未按约定期限履行还款义务的，自逾期之日起，对逾期未还本息按年化利率" + overdueAnnual + "%计收逾期利息（在借款期间利息之外另行计收），直至清偿完毕。\n\n" +
+        "五、还款方式\n";
+
+      var repaymentBlock = "";
+      if(repaymentType === "lump"){
+        var lumpNote = getVal("lumpNote") || "到期一次性归还本金并支付借款期间利息。";
+        var payChannel = getVal("payChannel");
+        repaymentBlock =
+          "（一）一次性还款\n" +
+          "乙方承诺：" + lumpNote + "\n" +
+          (payChannel ? "还款方式/渠道：" + payChannel + "\n" : "") +
+          "\n";
+      }else{
+        var count = getVal("installmentCount");
+        var day = getVal("installmentDay");
+        var rule = document.getElementById("installmentRule").value;
+        var detail = getVal("installmentDetail");
+
+        if(!count || !day){
+          alert("选择“分期还款”后，请填写分期期数和每期还款日。");
+          return;
+        }
+
+        repaymentBlock =
+          "（一）分期还款\n" +
+          "1. 分期期数：" + count + "期。\n" +
+          "2. 每期还款日：每月" + day + "日（如遇节假日顺延/不顺延由双方另行约定）。\n" +
+          "3. 分期规则：" + rule + "。\n" +
+          (detail ? "4. 分期明细：" + detail + "。\n" : "") +
+          "（注：如另有分期还款明细表，可作为本借条附件，与本借条具有同等效力。）\n\n";
+      }
+
+      var costBlock =
+        "六、违约责任与维权费用\n" +
+        "乙方违约的，应承担相应违约责任，并应向守约方承担其为实现债权/主张权利所支出的合理费用（含但不限于：诉讼费、差旅费、食宿费、保函费、保全费、律师费等费用）。\n\n" +
+        "七、争议解决\n" +
+        "因本借条产生的或与本借条有关的一切争议，协商不成的，" + dispute + "。\n\n" +
+        (remark ? "八、备注\n" + remark + "\n\n" : "") +
+        "九、其他\n" +
+        "本借条自双方签字/捺印之日起生效。本借条一式两份，甲乙双方各执一份，具有同等法律效力。\n\n" +
+        "甲方（出借人）签字/捺印：" + lenderName + "\n" +
+        "乙方（借款人）签字/捺印：" + borrowerName + "\n" +
+        "签署日期：" + fmtDateCN(new Date().toISOString().slice(0,10)) + "\n";
+
+      var text = base + repaymentBlock + costBlock;
+      document.getElementById("result").value = text;
+    });
+
+    document.getElementById("copyBtn").addEventListener("click", function(){
+      var t = document.getElementById("result").value;
+      if(!t){
+        alert("请先生成借条。");
+        return;
+      }
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(t).then(function(){
+          alert("已复制到剪贴板。");
+        }).catch(function(){
+          alert("复制失败：请手动全选复制（Ctrl+A，Ctrl+C）。");
+        });
+      }else{
+        alert("你的浏览器不支持一键复制：请手动全选复制（Ctrl+A，Ctrl+C）。");
+      }
+    });
+
+    document.getElementById("clearBtn").addEventListener("click", function(){
+      var ids = [
+        "lenderName","borrowerName","lenderId","borrowerId",
+        "amount","loanDate","dueDate","interestAnnual","overdueAnnual",
+        "lumpNote","payChannel",
+        "installmentCount","installmentDay","installmentDetail",
+        "remark"
+      ];
+      ids.forEach(function(id){ setVal(id,""); });
+      document.getElementById("result").value = "";
+      document.getElementById("repaymentType").value = "lump";
+      toggleRepayment();
+    });
+  </script>
+</body>
+</html>
