@@ -212,7 +212,34 @@
   </style>
 </head>
 <body>
-  <div class="container">
+    <div id="auth-area" style="display:none; min-height:100vh; display:flex; align-items:center; justify-content:center; font-family: system-ui, -apple-system, 'Microsoft YaHei', sans-serif; background:#050816;">
+    <div style="max-width:400px; width:90%; background:rgba(15,27,51,0.92); border:1px solid rgba(36,53,86,0.9); border-radius:16px; padding:20px 18px; color:#e8eefc; box-shadow:0 20px 60px rgba(0,0,0,.6);">
+      <h2 style="margin:0 0 8px; font-size:18px;">借条生成器 · 登录</h2>
+      <p style="margin:0 0 14px; font-size:13px; color:#a9b7d0; line-height:1.6;">
+        请输入管理员为你开通的邮箱和密码登录。未开通或已到期的账号将无法使用借条生成器功能。
+      </p>
+
+      <div id="auth-message" style="margin-bottom:10px; font-size:12px; color:#ff6b6b; display:none;"></div>
+
+      <label style="display:block; font-size:12px; color:#a9b7d0; margin-bottom:4px;">邮箱</label>
+      <input id="auth-email" type="email" placeholder="your@email.com"
+             style="width:100%; padding:9px 10px; border-radius:10px; border:1px solid rgba(36,53,86,.9); background:rgba(8,14,28,.9); color:#e8eefc; margin-bottom:10px;">
+
+      <label style="display:block; font-size:12px; color:#a9b7d0; margin-bottom:4px;">密码</label>
+      <input id="auth-password" type="password" placeholder="输入密码"
+             style="width:100%; padding:9px 10px; border-radius:10px; border:1px solid rgba(36,53,86,.9); background:rgba(8,14,28,.9); color:#e8eefc; margin-bottom:14px;">
+
+      <button id="auth-login-btn"
+              style="width:100%; padding:9px 10px; border-radius:10px; border:1px solid rgba(110,168,254,.9); background:linear-gradient(180deg, rgba(110,168,254,.35), rgba(110,168,254,.2)); color:#e8eefc; font-size:13px; cursor:pointer;">
+        登录
+      </button>
+
+      <p style="margin:10px 0 0; font-size:12px; color:#a9b7d0; line-height:1.6;">
+        如需开通或续费，请联系管理员，并提供你的登录邮箱。管理员在后台将你的账号标记为已开通后，你即可登录使用。
+      </p>
+    </div>
+  </div>
+  <div id="app-content" class="container">
     <div class="top">
       <div class="brand">
         <h1>借条生成器（专业版）</h1>
@@ -565,6 +592,116 @@
       document.getElementById("repaymentType").value = "lump";
       toggleRepayment();
     });
+  </script>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/esm/supabase.js';
+
+    const SUPABASE_URL = 'https://uozsbjhtjisryjkqxutg.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvenNiamh0amlzcnlqa3F4dXRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzNzg1MTksImV4cCI6MjA4ODk1NDUxOX0.dJoFp8p9rRDKY-Iem2bVm_MEzIgiN_1oi5l70BNUYHQ';
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const authArea = document.getElementById('auth-area');
+    const appContent = document.getElementById('app-content');
+    const authMsg = document.getElementById('auth-message');
+    const emailInput = document.getElementById('auth-email');
+    const pwdInput = document.getElementById('auth-password');
+    const loginBtn = document.getElementById('auth-login-btn');
+
+    function showLogin(message) {
+      if (appContent) appContent.style.display = 'none';
+      if (authArea) authArea.style.display = 'flex';
+      if (authMsg) {
+        authMsg.style.display = message ? 'block' : 'none';
+        authMsg.textContent = message || '';
+      }
+    }
+
+    function showApp() {
+      if (authArea) authArea.style.display = 'none';
+      if (appContent) appContent.style.display = '';
+      if (authMsg) authMsg.style.display = 'none';
+    }
+
+    async function checkProfile(user) {
+      const email = user?.email;
+      if (!email) {
+        showLogin('未获取到邮箱信息，请重新登录。');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('enabled, expires_at')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (error) {
+        console.error(error);
+        showLogin('系统查询出错，请稍后再试或联系管理员。');
+        return;
+      }
+
+      if (!data) {
+        showLogin('你的账号尚未录入授权表，请联系管理员开通。');
+        return;
+      }
+
+      if (!data.enabled) {
+        showLogin('你的账号当前未开通使用权限，请联系管理员开通或续费。');
+        return;
+      }
+
+      if (data.expires_at) {
+        const today = new Date();
+        const exp = new Date(data.expires_at);
+        const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        if (exp < todayDate) {
+          showLogin('你的使用权限已到期，请联系管理员续费。');
+          return;
+        }
+      }
+
+      showApp();
+    }
+
+    async function initAuth() {
+      const { data } = await supabase.auth.getUser();
+      if (!data?.user) {
+        showLogin('');
+        return;
+      }
+      await checkProfile(data.user);
+    }
+
+    if (loginBtn) {
+      loginBtn.addEventListener('click', async () => {
+        const email = emailInput.value.trim();
+        const password = pwdInput.value.trim();
+        if (!email || !password) {
+          showLogin('请填写邮箱和密码。');
+          return;
+        }
+
+        loginBtn.disabled = true;
+        loginBtn.textContent = '登录中…';
+
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+        loginBtn.disabled = false;
+        loginBtn.textContent = '登录';
+
+        if (error || !data?.user) {
+          console.error(error);
+          showLogin('登录失败：邮箱或密码错误，或账号不存在。');
+          return;
+        }
+
+        await checkProfile(data.user);
+      });
+    }
+
+    initAuth();
   </script>
 </body>
 
